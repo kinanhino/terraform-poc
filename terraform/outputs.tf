@@ -1,22 +1,22 @@
 # Project Outputs
 output "project_a_id" {
   description = "Project A ID"
-  value       = module.project-a.project_id
+  value       =  module.project_a.project_id
 }
 
 output "project_a_number" {
   description = "Project A number"
-  value       = module.project-a.project_number
+  value       =  module.project_a.project_number
 }
 
 output "project_b_id" {
   description = "Project B ID"
-  value       = module.project-b.project_id
+  value       =  module.project_b.project_id
 }
 
 output "project_b_number" {
   description = "Project B number"
-  value       = module.project-b.project_number
+  value       =  module.project_b.project_number
 }
 
 # Network Outputs
