@@ -63,6 +63,11 @@ resource "helm_release" "nginx_ingress" {
       }
     })
   ]
+  
+  # Wait for the chart to be fully deployed
+  wait = true
+  timeout = 600
+  
   depends_on = [module.kubernetes-engine, kubernetes_namespace.ingress_nginx]
 }
 

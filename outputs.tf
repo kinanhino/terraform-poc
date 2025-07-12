@@ -151,8 +151,8 @@ output "test_commands" {
   }
 }
 
-# Internal Load Balancer IP (from K8s service)
-output "internal_lb_ip" {
-  description = "Internal Load Balancer IP from Kubernetes service"
-  value       = kubernetes_service.example.status[0].load_balancer[0].ingress[0].ip
+# Nginx Ingress Controller Internal Load Balancer IP
+output "nginx_ingress_internal_ip" {
+  description = "Nginx Ingress Controller Internal Load Balancer IP"
+  value       = try(data.kubernetes_service.nginx_ingress_controller.status[0].load_balancer[0].ingress[0].ip, "pending")
 }

@@ -105,13 +105,13 @@ resource "null_resource" "wait_for_psc" {
   provisioner "local-exec" {
     command = <<-EOT
       echo "Waiting for PSC flow to be ready..."
-      for i in {1..120}; do
+      for i in {1...40}; do
         if curl -f -k https://${module.gce-lb-http.external_ip}; then
           echo "PSC flow is working!"
           exit 0
         fi
-        echo "Attempt $i/120 failed, waiting 5 seconds..."
-        sleep 5
+        echo "Attempt $i/40 failed, waiting 15 seconds..."
+        sleep 15
       done
       echo "Timeout waiting for PSC flow"
       exit 1
