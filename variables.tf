@@ -17,21 +17,27 @@ variable kubernetes {
     ip_range_pods = string
     ip_range_services = string
     name = string
-
-    # perimeter_name        = bool
-    # resources             = list(string)
-    # restricted_services   = list(string)
-    # access_levels         = list(string)
   })
 }
 
-variable "vpc" {
-  description = "VPC configuration with subnetworks"
+variable "vpc_a" {
+  description = "project a vpc configuration with subnetworks"
+  type = object({
+    network    = string
+    subnet_name = string
+    subnet_cidr = string
+  })
+}
+
+variable "vpc_b" {
+  description = "proejct b vpc configuration with subnetworks"
   type = object({
     network    = string
     subnet_name = string
     subnet_cidr = string
     pods_cidr = string
     services_cidr = string
+    psc_subnet_name = string
+    psc_subnet_ip = string
   })
 }

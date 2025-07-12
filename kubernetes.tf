@@ -1,133 +1,12 @@
-terraform {
-  required_providers {
-    google = {
-      source = "hashicorp/google"
-      version = "6.43.0"
-    }
-    helm = {
-      source = "hashicorp/helm"
-      version = "3.0.2"
-    }
-  }
-}
-
-provider "google" {
-  region  = var.project_b.region
-  zone    = var.project_b.zone
-}
-
-data "google_client_config" "default" {}
-
-provider "kubernetes" {
-  host                   = "https://${module.kubernetes-engine.endpoint}"
-  token                  = data.google_client_config.default.access_token
-  cluster_ca_certificate = base64decode(module.kubernetes-engine.ca_certificate)
-}
-
-provider "helm" {
-  kubernetes = {
-    host                   = "https://${module.kubernetes-engine.endpoint}"
-    token                  = data.google_client_config.default.access_token
-    cluster_ca_certificate = base64decode(module.kubernetes-engine.ca_certificate)
-  }
-}
-
-# resource "google_organization_iam_member" "project_creator_user" {
-#   org_id            = "0"
-#   role              = "roles/resourcemanager.projectCreator"
-#   member            = "user:kinanpersonalwork@gmail.com"
-# }
-
-
-module "project_a" {
-  source  = "terraform-google-modules/project-factory/google"
-  version = "18.0.0"
-  # insert the 2 required variables here
-  name = var.project_a.name
-  billing_account = var.billing_account
-  activate_apis = [
-    "compute.googleapis.com",
-  ]
-  disable_services_on_destroy = false
-  deletion_policy = "DELETE"
-}
-
-module "project_b" {
-  source  = "terraform-google-modules/project-factory/google"
-  version = "18.0.0"
-  # insert the 2 required variables here
-  name = var.project_b.name
-  billing_account = var.billing_account
-  activate_apis = [
-    "compute.googleapis.com",
-    "container.googleapis.com"
-  ]
-  disable_services_on_destroy = false
-  deletion_policy = "DELETE"
-}
-
-resource "google_project_service" "compute" {
-  project = module.project_b.project_id
-  service = "compute.googleapis.com"
-  depends_on = [
-    module.project_b
-  ]
-}
-
-resource "google_project_service" "container" {
-  project = module.project_b.project_id
-  service = "container.googleapis.com"
-  depends_on = [
-    google_project_service.compute
-  ]
-}
-
-module "network" {
-  source  = "terraform-google-modules/network/google"
-  version = "11.1.1"
-  network_name = var.vpc.network
-  project_id = module.project_b.project_id
-
-  subnets = [
-    {
-      subnet_name   = var.vpc.subnet_name
-      subnet_ip     = var.vpc.subnet_cidr
-      subnet_region = var.project_b.region
-      private_ip_google_access = true
-
-    }
-  ]
-  secondary_ranges = {
-    main-subnet = [
-      {
-        range_name    = var.kubernetes.ip_range_pods
-        ip_cidr_range = var.vpc.pods_cidr
-      },
-      {
-        range_name    = var.kubernetes.ip_range_services
-        ip_cidr_range = var.vpc.services_cidr
-      }
-    ]
-  }
-  depends_on = [
-    google_project_service.compute
-  ]
-}
-
-resource "time_sleep" "wait_for_network" {
-  depends_on = [module.network]
-  create_duration = "30s"
-}
-
 module "kubernetes-engine" {
     source  = "terraform-google-modules/kubernetes-engine/google"
     version = "37.0.0"
     ip_range_pods = var.kubernetes.ip_range_pods
     ip_range_services = var.kubernetes.ip_range_services
     name = var.kubernetes.name
-    network = module.network.network_name
+    network = module.project_b_network.network_name
     project_id = module.project_b.project_id
-    subnetwork = module.network.subnets_names[0]
+    subnetwork = module.project_b_network.subnets_names[0]
     region = var.project_b.region
     zones = [var.project_b.zone]
     remove_default_node_pool = true
@@ -149,8 +28,7 @@ module "kubernetes-engine" {
     ]
     
     depends_on = [
-    google_project_service.container,
-    time_sleep.wait_for_network
+    google_project_service.project_b_container,
   ]
 }
 
@@ -188,9 +66,9 @@ resource "helm_release" "nginx_ingress" {
   depends_on = [module.kubernetes-engine, kubernetes_namespace.ingress_nginx]
 }
 
-module "my-app-workload-identity" {
+module "gke-workload-identity" {
   source              = "terraform-google-modules/kubernetes-engine/google//modules/workload-identity"
-  name                = "app-wi"
+  name                = var.kubernetes.workload_identity
   namespace           = kubernetes_namespace.app_namespace.metadata[0].name
   project_id          = module.project_b.project_id
   roles               = ["roles/storage.admin", "roles/compute.admin"]
@@ -232,22 +110,10 @@ resource "kubernetes_deployment" "example" {
           image = "tiangolo/uwsgi-nginx-flask:python3.8"
           name  = "example"
 
-          # resources {
-          #   limits = {
-          #     cpu    = "0.5"
-          #     memory = "512Mi"
-          #   }
-          #   requests = {
-          #     cpu    = "250m"
-          #     memory = "50Mi"
-          #   }
-          # }
-
           liveness_probe {
             http_get {
               path = "/health"
               port = 80
-
             }
 
             initial_delay_seconds = 10
@@ -278,9 +144,6 @@ resource "kubernetes_service" "example" {
   metadata {
     name = "terraform-example"
     namespace = kubernetes_namespace.app_namespace.metadata[0].name
-    annotations = {
-      "cloud.google.com/load-balancer-type" = "Internal"
-    }
   }
   spec {
     selector = {
@@ -291,7 +154,7 @@ resource "kubernetes_service" "example" {
       target_port = 80
     }
 
-    type = "LoadBalancer"
+    type = "ClusterIP"
   }
   depends_on = [ kubernetes_namespace.app_namespace ]
 }
@@ -344,8 +207,8 @@ resource "kubernetes_secret" "tls_secret" {
     type = "kubernetes.io/tls"
 
     data = {
-      "tls.crt" = base64encode("example-cert")
-      "tls.key" = base64encode("example-key")
+      "tls.crt" = base64encode(file("dummy_certs/certificate.pem"))
+      "tls.key" = base64encode(file("dummy_certs/private-key.pem"))
     }
     depends_on = [ kubernetes_namespace.app_namespace ]
   }
@@ -358,7 +221,6 @@ resource "kubernetes_ingress_v1" "example_ingress" {
       "kubernetes.io/ingress.class" = "nginx"
       "nginx.ingress.kubernetes.io/ssl-redirect" = "true"
       "nginx.ingress.kubernetes.io/force-ssl-redirect" = "true"
-      
     }
   }
 
@@ -387,4 +249,3 @@ resource "kubernetes_ingress_v1" "example_ingress" {
   }
   depends_on = [ kubernetes_namespace.app_namespace, kubernetes_service.example, helm_release.nginx_ingress ]
 }
-
