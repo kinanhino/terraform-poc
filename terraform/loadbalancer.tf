@@ -3,8 +3,8 @@ resource "google_compute_ssl_certificate" "example" {
   project     = module.project_a.project_id
   description = "SSL certificate for external load balancer"
   
-  certificate =  file("dummy_certs/certificate.pem")
-  private_key = file("dummy_certs/private-key.pem")
+  certificate =  file(var.certificate_path)
+  private_key = file(var.private_key_path)
   lifecycle {
     create_before_destroy = true
   }

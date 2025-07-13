@@ -212,8 +212,8 @@ resource "kubernetes_secret" "tls_secret" {
     type = "kubernetes.io/tls"
 
     data = {
-      "tls.crt" = base64encode(file("dummy_certs/certificate.pem"))
-      "tls.key" = base64encode(file("dummy_certs/private-key.pem"))
+      "tls.crt" = base64encode(file(var.certificate_path))
+      "tls.key" = base64encode(file(var.private_key_path))
     }
     depends_on = [ kubernetes_namespace.app_namespace ]
   }

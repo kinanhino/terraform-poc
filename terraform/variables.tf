@@ -41,3 +41,11 @@ variable "vpc_b" {
     psc_subnet_ip = string
   })
 }
+
+variable private_key_path {
+  type = string
+}
+
+variable certificate_path {
+  type = string
+}
