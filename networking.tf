@@ -67,6 +67,7 @@ resource "google_compute_address" "psc_endpoint_ip" {
 
 # PSC Endpoint in Project A - Connect to published service
 resource "google_compute_forwarding_rule" "psc_endpoint" {
+  
   name                  = "psc-endpoint-to-project-b"
   project               = module.project_a.project_id
   region                = var.project_a.region
@@ -87,6 +88,7 @@ resource "google_compute_forwarding_rule" "psc_endpoint" {
 
 # PSC Service Attachment - Publish the nginx ingress service
 resource "google_compute_service_attachment" "psc_service_attachment" {
+  
   name        = "psc-service-attachment"
   project     = module.project_b.project_id
   region      = var.project_b.region
