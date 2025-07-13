@@ -1,4 +1,5 @@
 resource "google_compute_instance" "psc_proxy" {
+  
   name         = "psc-proxy"
   machine_type = "e2-small"
   zone         = "${var.project_a.region}-a"
@@ -44,6 +45,7 @@ NGINX
 }
 
 resource "google_compute_instance_group" "psc_proxy_group" {
+  
   name      = "psc-proxy-group"
   zone      = "${var.project_a.region}-a"
   project   = module.project_a.project_id
