@@ -1,5 +1,5 @@
-# Main Terraform configuration for PSC setup
-# External LB (Project A) -> Proxy VM -> PSC -> nginx ingress (Project B) -> Flask app
+# Main Terraform configuration for Terraform POC
+# External LB (Project A) -> Proxy VM -> PSC -> internal LB (Project B) -> GKE -> nginx ingress -> Flask app
 
 # This file orchestrates the overall infrastructure
 # Specific resources are organized in separate files:
