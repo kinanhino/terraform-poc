@@ -1,11 +1,11 @@
 project_a = {
-  name = "terraform-poc-projec-a"
+  name = "terraform-poc-project-a"
   region  = "me-west1"
   zone    = "me-west1-a"
 }
 
 project_b = {
-  name = "terraform-poc-projec-b"
+  name = "terraform-poc-project-b"
   region  = "me-west1"
   zone    = "me-west1-a"
 }
